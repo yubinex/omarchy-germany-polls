@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "yubinex.germany-polls",
+  "name": "Germany Polls",
+  "version": "1.0.0",
+  "author": "yubinex",
+  "description": "Live German election polls in the Omarchy bar, with a map of the leading party in every state.",
+  "license": "MIT",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Germany Polls",
+    "description": "Bundestag polling leader in the bar; click for a map of the latest state polls from DAWUM.",
+    "category": "Info",
+    "aliases": ["polls", "umfragen", "sonntagsfrage", "germany", "election"],
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
