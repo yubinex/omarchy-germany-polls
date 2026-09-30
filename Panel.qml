@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import Quickshell
 import qs.Commons
 import qs.Ui
 import "Polls.js" as Polls
@@ -24,10 +25,15 @@ Panel {
   property bool fetchFailed: false
   property string selectedParliament: "0"
   property string hoveredParliament: ""
+  property bool monitorsExpanded: false
 
-  readonly property string barDisplay: {
-    var mode = setting("barDisplay", "leader")
-    return mode === "ticker" || mode === "icon" ? mode : "leader"
+  // The monitor this panel's bar widget lives on.
+  property string hostScreen: ""
+  readonly property int visibleScreenCount: {
+    var count = 0
+    for (var i = 0; i < Quickshell.screens.length; ++i)
+      if (modeFor(String(Quickshell.screens[i].name || "")) !== "hidden") count++
+    return count
   }
   readonly property string shownParliament: hoveredParliament || selectedParliament
   readonly property var shown: polls ? polls.parliaments[shownParliament] || null : null
@@ -75,6 +81,34 @@ Panel {
       bar.shell.updateEntryInline(moduleName, entry)
   }
 
+  // Mirrors BarWidget.barDisplay: a per-monitor override, else the default.
+  function modeFor(screenName) {
+    var perScreen = setting("screenDisplay", {})
+    var mode = perScreen && perScreen[screenName] ? perScreen[screenName] : setting("barDisplay", "leader")
+    return mode === "ticker" || mode === "icon" || mode === "hidden" ? mode : "leader"
+  }
+
+  function modeLabel(mode) {
+    return { leader: "leading party", ticker: "ticker", icon: "icon", hidden: "hidden" }[mode] || mode
+  }
+
+  function monitorSummary() {
+    var parts = []
+    for (var i = 0; i < Quickshell.screens.length; ++i) {
+      var name = String(Quickshell.screens[i].name || "")
+      parts.push(name + " " + modeLabel(modeFor(name)))
+    }
+    return parts.join(" · ")
+  }
+
+  function setDisplayForScreen(screenName, mode) {
+    var current = setting("screenDisplay", {})
+    var next = {}
+    for (var name in current) next[name] = current[name]
+    next[screenName] = mode
+    persistSettings({ screenDisplay: next })
+  }
+
   function updatedText() {
     if (fetchFailed && fetchedMs <= 0) return "Could not reach DAWUM"
     if (fetchedMs <= 0) return "Loading polls…"
@@ -82,7 +116,7 @@ Panel {
       + (fetchFailed ? " · last refresh failed" : "")
   }
 
-  onOpenedChanged: if (!opened) { hoveredParliament = ""; selectedParliament = "0" }
+  onOpenedChanged: if (!opened) { hoveredParliament = ""; selectedParliament = "0"; monitorsExpanded = false }
 
   KeyboardPanel {
     id: popup
@@ -326,45 +360,109 @@ Panel {
           font.pixelSize: 11
         }
 
-        Row {
+        Column {
+          width: parent.width
           spacing: Style.space(6)
-          Text {
-            anchors.verticalCenter: parent.verticalCenter
-            rightPadding: Style.space(4)
-            text: "BAR SHOWS"
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: 11
-            font.bold: true
-          }
-          Repeater {
-            model: [
-              { id: "leader", label: "LEADING PARTY" },
-              { id: "ticker", label: "TICKER" },
-              { id: "icon", label: "ICON ONLY" }
-            ]
-            delegate: Rectangle {
-              required property var modelData
-              readonly property bool current: root.barDisplay === modelData.id
-              implicitWidth: displayLabel.implicitWidth + Style.space(16)
-              implicitHeight: Style.space(25)
-              radius: Style.space(3)
-              color: current ? Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.16) : "transparent"
-              border.width: 1
-              border.color: current ? root.fg : root.dim
+
+          Item {
+            width: parent.width
+            height: Style.space(22)
+
+            Row {
+              id: monitorsHeader
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(8)
               Text {
-                id: displayLabel
-                anchors.centerIn: parent
-                text: modelData.label
-                color: parent.current ? root.fg : root.dim
+                text: (root.monitorsExpanded ? "▾ " : "▸ ") + "BAR PER MONITOR"
+                color: root.monitorsExpanded ? root.fg : root.dim
                 font.family: root.fontFamily
                 font.pixelSize: 11
                 font.bold: true
               }
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.persistSettings({ barDisplay: modelData.id })
+            }
+            Text {
+              anchors.left: monitorsHeader.right
+              anchors.leftMargin: Style.space(10)
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !root.monitorsExpanded
+              text: root.monitorSummary()
+              elide: Text.ElideRight
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: 11
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.monitorsExpanded = !root.monitorsExpanded
+            }
+          }
+
+          Repeater {
+            model: root.monitorsExpanded ? Quickshell.screens : []
+
+            delegate: Row {
+              id: screenRow
+              required property var modelData
+              readonly property string screenName: String(modelData.name || "")
+              readonly property string mode: root.modeFor(screenName)
+              width: parent.width
+              spacing: Style.space(6)
+
+              Text {
+                id: screenLabel
+                anchors.verticalCenter: parent.verticalCenter
+                width: Style.space(96)
+                text: screenRow.screenName + (screenRow.screenName === root.hostScreen ? " ·" : "")
+                elide: Text.ElideRight
+                color: screenRow.screenName === root.hostScreen ? root.fg : root.dim
+                font.family: root.fontFamily
+                font.pixelSize: 11
+                font.bold: true
+              }
+
+              Flow {
+                width: parent.width - screenLabel.width - parent.spacing
+                spacing: Style.space(6)
+
+                Repeater {
+                  model: [
+                    { id: "leader", label: "LEADING PARTY" },
+                    { id: "ticker", label: "TICKER" },
+                    { id: "icon", label: "ICON" },
+                    { id: "hidden", label: "HIDDEN" }
+                  ]
+                  delegate: Rectangle {
+                    required property var modelData
+                    readonly property bool current: screenRow.mode === modelData.id
+                    // Hiding the last visible copy would leave no widget to
+                    // open this panel from, and so no way to undo it here.
+                    readonly property bool enabled: current || modelData.id !== "hidden" || root.visibleScreenCount > 1
+                    implicitWidth: displayLabel.implicitWidth + Style.space(16)
+                    implicitHeight: Style.space(25)
+                    radius: Style.space(3)
+                    opacity: enabled ? 1 : 0.35
+                    color: current ? Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.16) : "transparent"
+                    border.width: 1
+                    border.color: current ? root.fg : root.dim
+                    Text {
+                      id: displayLabel
+                      anchors.centerIn: parent
+                      text: modelData.label
+                      color: parent.current ? root.fg : root.dim
+                      font.family: root.fontFamily
+                      font.pixelSize: 11
+                      font.bold: true
+                    }
+                    MouseArea {
+                      anchors.fill: parent
+                      enabled: parent.enabled && !parent.current
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: root.setDisplayForScreen(screenRow.screenName, modelData.id)
+                    }
+                  }
+                }
               }
             }
           }

@@ -42,6 +42,20 @@ ticker's visible width in pixels (default `220`); hovering pauses it.
 { "id": "yubinex.germany-polls", "barDisplay": "ticker", "tickerWidth": 260 }
 ```
 
+`screenDisplay` overrides the mode per monitor (names from `hyprctl monitors`),
+and also accepts `"hidden"`. For example, a ticker on the ultrawide and just the
+leader everywhere else:
+
+```json
+{ "id": "yubinex.germany-polls", "barDisplay": "leader", "screenDisplay": { "DP-1": "ticker" } }
+```
+
+The panel lists every monitor with its mode, so a monitor where the widget is
+hidden can be switched back from any monitor where it is still visible. The
+last visible monitor cannot be hidden from the panel; if every monitor is
+hidden via `shell.json`, edit it there or open the panel with
+`omarchy-shell shell toggle yubinex.germany-polls`.
+
 ## Controls
 
 - Left click: open or close the map

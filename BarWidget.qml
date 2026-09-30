@@ -15,10 +15,14 @@ BarWidget {
   // DAWUM parliament id shown in the bar: "0" is the Bundestag, 1-16 the states.
   readonly property string barParliament: String(setting("parliament", "0"))
   // "leader" shows the leading party, "ticker" scrolls through every party,
-  // "icon" shows only a ballot box so no results appear in the bar at all.
+  // "icon" shows only a ballot box so no results appear in the bar at all,
+  // and "hidden" removes the widget. `screenDisplay` overrides `barDisplay`
+  // per monitor, e.g. { "DP-1": "ticker" }.
+  readonly property string screenName: barWindow && barWindow.screen ? String(barWindow.screen.name || "") : ""
   readonly property string barDisplay: {
-    var mode = setting("barDisplay", "leader")
-    return mode === "ticker" || mode === "icon" ? mode : "leader"
+    var perScreen = setting("screenDisplay", {})
+    var mode = perScreen && screenName && perScreen[screenName] ? perScreen[screenName] : setting("barDisplay", "leader")
+    return mode === "ticker" || mode === "icon" || mode === "hidden" ? mode : "leader"
   }
   readonly property bool iconMode: barDisplay === "icon"
   // Visible width of the ticker, in unscaled pixels.
@@ -56,6 +60,8 @@ BarWidget {
     if (!fetchProcess.running) fetchProcess.running = true
   }
 
+  // The bar collapses a slot whose widget is invisible.
+  visible: barDisplay !== "hidden"
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
@@ -102,6 +108,7 @@ BarWidget {
     panelLoader.item.fetchFailed = fetchFailed
     panelLoader.item.settings = settings
     panelLoader.item.hostWidget = root
+    panelLoader.item.hostScreen = screenName
     panelLoader.item.anchorItem = panelAnchor
     panelLoader.item.bar = bar
   }
@@ -111,6 +118,7 @@ BarWidget {
   onFetchFailedChanged: injectPanel()
   onSettingsChanged: injectPanel()
   onBarChanged: injectPanel()
+  onScreenNameChanged: injectPanel()
 
   Loader {
     id: panelLoader
