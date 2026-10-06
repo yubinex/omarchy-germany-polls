@@ -264,7 +264,7 @@ BarWidget {
       } else if (mouseButton === Qt.MiddleButton) {
         root.refresh()
       } else if (mouseButton === Qt.RightButton && root.bar) {
-        root.bar.run("xdg-open " + (root.summary ? root.summary.url : "https://dawum.de/"))
+        Quickshell.execDetached(["xdg-open", root.summary ? root.summary.url : "https://dawum.de/"])
       }
     }
     Accessible.role: Accessible.Button

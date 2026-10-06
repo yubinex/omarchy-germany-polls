@@ -490,7 +490,7 @@ Panel {
             MouseArea {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
-              onClicked: if (root.bar) root.bar.run("xdg-open " + (root.shown ? root.shown.url : "https://dawum.de/"))
+              onClicked: Quickshell.execDetached(["xdg-open", root.shown ? root.shown.url : "https://dawum.de/"])
             }
           }
         }
