@@ -12,8 +12,11 @@ results for the Bundestag or any state you hover or click.
 - Polls: [DAWUM](https://dawum.de/) (`api.dawum.de/newest_surveys.json`),
   licensed [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
   Refreshed every 30 minutes.
-- Each figure is the average of every institute's newest poll from the 30 days
-  before the latest poll for that parliament. Most states only have one.
+- By default each figure is the average of every institute's newest poll from
+  the 30 days before the latest poll for that parliament; a party a poll does
+  not list counts as 0 there, so the average adds up like the polls do. Most
+  states only have one poll. Set `pollMode` to `"latest"` (or use the toggle in
+  the map panel) to show only the most recent poll instead.
 - State borders: [deutschlandGeoJSON](https://github.com/isellsoap/deutschlandGeoJSON),
   simplified into `GermanyMap.js` by `tools/build-map.py`.
 

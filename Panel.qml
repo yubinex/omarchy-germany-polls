@@ -109,6 +109,10 @@ Panel {
     persistSettings({ screenDisplay: next })
   }
 
+  function setPollMode(mode) {
+    persistSettings({ pollMode: mode })
+  }
+
   function updatedText() {
     if (fetchFailed && fetchedMs <= 0) return "Could not reach DAWUM"
     if (fetchedMs <= 0) return "Loading polls…"
@@ -341,8 +345,10 @@ Panel {
 
             Text {
               width: parent.width
-              visible: root.shown !== null && root.shown.pollCount > 1
-              text: root.shown ? root.shown.institutes.join(", ") : ""
+              visible: text !== ""
+              // Several polls: who they are from. One poll: who it was for,
+              // its sample, method and field dates.
+              text: !root.shown ? "" : root.shown.pollCount > 1 ? root.shown.institutes.join(", ") : root.shown.details
               wrapMode: Text.WordWrap
               color: root.dim
               font.family: root.fontFamily
@@ -358,6 +364,57 @@ Panel {
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: 11
+        }
+
+        Row {
+          width: parent.width
+          spacing: Style.space(10)
+
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "FIGURES"
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: 11
+            font.bold: true
+          }
+
+          Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.space(6)
+
+            Repeater {
+              model: [
+                { id: "average", label: "AVERAGE" },
+                { id: "latest", label: "LATEST POLL" }
+              ]
+              delegate: Rectangle {
+                required property var modelData
+                readonly property bool current: (root.setting("pollMode", "average") === "latest" ? "latest" : "average") === modelData.id
+                implicitWidth: pollModeLabel.implicitWidth + Style.space(12)
+                implicitHeight: Style.space(22)
+                radius: Style.space(3)
+                color: current ? Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.16) : "transparent"
+                border.width: 1
+                border.color: current ? root.fg : root.dim
+                Text {
+                  id: pollModeLabel
+                  anchors.centerIn: parent
+                  text: modelData.label
+                  color: parent.current ? root.fg : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: 11
+                  font.bold: true
+                }
+                MouseArea {
+                  anchors.fill: parent
+                  enabled: !parent.current
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.setPollMode(modelData.id)
+                }
+              }
+            }
+          }
         }
 
         Column {

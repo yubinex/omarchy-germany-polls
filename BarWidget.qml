@@ -27,7 +27,12 @@ BarWidget {
   readonly property bool iconMode: barDisplay === "icon"
   // Visible width of the ticker, in unscaled pixels.
   readonly property int tickerWidth: Number(setting("tickerWidth", 220)) || 220
-  property var polls: null
+  // "average" (default) averages each institute's newest poll; "latest"
+  // shows only the most recent poll.
+  readonly property string pollMode: setting("pollMode", "average") === "latest" ? "latest" : "average"
+  // The last good DAWUM payload, kept raw so switching pollMode needs no refetch.
+  property string pollsText: ""
+  readonly property var polls: pollsText ? Polls.parse(pollsText, pollMode) : null
   property double fetchedMs: 0
   property bool fetchFailed: false
 
@@ -144,9 +149,8 @@ BarWidget {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: function() {
-        var parsed = Polls.parse(text)
-        if (parsed) {
-          root.polls = parsed
+        if (Polls.parse(text)) {
+          root.pollsText = text
           root.fetchedMs = Date.now()
           root.fetchFailed = false
         } else {
